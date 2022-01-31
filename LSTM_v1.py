@@ -6,7 +6,6 @@
 
 # Primary Imports
 
-
 import pandas as pd
 import numpy as np
 import os
@@ -14,6 +13,7 @@ from random import random
 
 
 # Variables
+
 SEQ_WINDOW = 60 #unit minute, how long of a preceding sequence to collect for RNN
 FUTURE_PRED_WINDOW = 3 #unit minute, how far in the future are we predicting into
 PAIR_TO_PRED = "BTC-USD"
