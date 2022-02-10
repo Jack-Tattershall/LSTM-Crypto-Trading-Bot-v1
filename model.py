@@ -29,7 +29,7 @@ def model(x_len):
 
     loss = 'sparse_categorical_crossentropy'
     optimiser = tf.keras.optimizers.Adam(lr=0.001, decay=1e-6)
-    metrics = ['accuracy']
+    metrics = ['accuracy', 'loss']
     
     model.complile(loss=loss,
                    optimizer=optimiser,
