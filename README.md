@@ -12,6 +12,7 @@ LSTM Cryptocurrency Trading Bot v1
 - RSI? 
 
 # General Comments
+- Use Google Collab via local terminal
 - Train model daily, trade daily
 - Integrate TAs
 - Integrate Market sentiment
