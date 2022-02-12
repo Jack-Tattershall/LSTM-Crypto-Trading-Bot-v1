@@ -6,6 +6,8 @@
 
 # Primary Imports
 
+from json.tool import main
+from re import L
 import pandas as pd
 import numpy as np
 import os
@@ -64,22 +66,19 @@ main_df[f'{PAIR_TO_PRED}_target'] = list(map(buysell_logic, main_df[f"{PAIR_TO_P
 #main_df.head()
 
 
-# Partion Main Dataset into Train & Test Datasets
+# Partion Main Dataset into Train, Validate & Test Datasets
+
+TEST_LEN = 0.05
+VAL_LEN = 0.10
 
 times = sorted(main_df.index.values)
-last_5pct = times[-int(len(times)*0.05)]
-last_5pct_len = int(len(times)*0.05)
 
-train_df = main_df[(main_df.index >= last_5pct)]
-test_df = main_df[(main_df.index < last_5pct)]
+partition_index_test = times[-int(len(times) * TEST_LEN)]
+partition_index_val = times[-int(len(times) * VAL_LEN)]
 
-# Partion Train Dataset into Train & Validation Datasets
-
-times = sorted(train_df.index.values)
-last_5pct = times[-last_5pct_len]
-
-train_df = train_df[(train_df.index >= last_5pct)]
-val_df = train_df[(train_df.index < last_5pct)]
+test_df = main_df[main_df.index > partition_index_test]
+val_df = main_df[(main_df.index > partition_index_val) & (main_df.index <= partition_index_test)]
+train_df = main_df[main_df.index <= partition_index_val]
 
 
 # Normalise & Scale, Create Sequences and Balance Datasets
@@ -92,14 +91,15 @@ def preprocess_df(df, PAIR_TO_PRED):
     
     #Normalise and Scale
     
-    df.drop(f'{PAIR_TO_PRED}_future', 1)
-    
+    df = df.drop(f'{PAIR_TO_PRED}_future', axis=1) #not reqd anymore
+
     for col in df.columns:
+   
         if col != f'{PAIR_TO_PRED}_target':
-            
-            df[col] = df[col].pct_change() #percent change - normalises
+
+            df.loc[:,col] = df[col].pct_change() #percent change - normalises
             df.dropna(inplace=True)
-            df[col] = preprocessing.scale(df[col].values) #scale between [0,1]
+            df.loc[:,col] = preprocessing.scale(df[col].values) #scale between [0,1]
     
     df.dropna(inplace=True) #jic
     
@@ -115,25 +115,26 @@ def preprocess_df(df, PAIR_TO_PRED):
             sequential_data.append([np.array(prev_window), i[-1]]) #append the sequences [features, label]
 
     shuffle(sequential_data) #shuffle for good measure
-    
+
     #Balance
     
     buys = [] #store buy sequences
     sells = [] #store sell sequences
     
     for seq, target in sequential_data:
-        
-        if target==0:
+
+        if int(target)==0:
             sells.append([seq, target])
         else:
-            sells.append([seq, target])
+            buys.append([seq, target])
             
-    
+   
+
     shuffle(sells)
     shuffle(buys)
     
     least = min(len(sells), len(buys))
-    
+
     buys = buys[:least] #balance to least
     sells = sells[:least] #balance to least
     
@@ -171,11 +172,23 @@ print(f"Test Dont buys: {test_labels.count(0)}, Buys: {test_labels.count(1)}")
 
 MODEL_NAME = "lstm_m1"
 VERSION = "v1"
+BASE = r"C:\Users\JackT\repos\LSTM-Crypto-Trading-Bot-v1"
 
-if not os.path.exists(f"{BASE}/logs/{MODEL_NAME}/{VERSION}"):
-    os.mkdir(f"{BASE}/logs/{MODEL_NAME}/{VERSION}")
-if not os.path.exists(f"{BASE}/weights/{MODEL_NAME}/{VERSION}/"):
-    os.mkdir(f"{BASE}/weights/{MODEL_NAME}/{VERSION}/")
+dirs_to_make = ["logs", 
+                f"logs/{MODEL_NAME}",
+                f"logs/{MODEL_NAME}/{VERSION}",
+                "weights", 
+                f"weights/{MODEL_NAME}",
+                f"weights/{MODEL_NAME}/{VERSION}", 
+                "plots"]
+                        
+dirs = {dirname: os.path.join(BASE,dirname) for dirname in dirs_to_make}
+
+for key, dirname in dirs.items():
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
+        print(f"making {dirname}")
+
 
 
 BATCH_SIZE = 64 #reduce if OOM
